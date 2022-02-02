@@ -78,7 +78,7 @@ In order to tear down the project, run the command `make destroy`
    * Alerting via email using SNS when DAG exceptions (via CloudWatch Logging), NULL costs or no data has been pushed (via OpenSearch)
 - Security:
    * MFA (manually configured)
-   * Secret Management (no password in the code, random generation)
+   * Secret Manager (no password in the code, random generation)
    * Encryption: in-transit and at-rest for most of services except S3 
    * CloudTrail
    * Only MWAA and OpenSearch are publicly accessible. All resources are deployed in private networks (Internet access via NAT Gateway)
