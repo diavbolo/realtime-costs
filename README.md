@@ -106,6 +106,7 @@ In order to tear down the project, run the command `make destroy`
    * Increase the HA with a multi-region setup
    * Add more CloudWatch alerts
    * Implement proper testing (unit, integration, end-to-end) and code quality assessment (coverage, naming convention, security vulnerability)
+   * Move from Terraform to CloudFormation (no state required, native integration, domain creation)
  
  
 # Known issues
