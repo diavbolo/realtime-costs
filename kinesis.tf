@@ -370,7 +370,7 @@ resource "null_resource" "kinesis_firehose_destroy" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "aws firehose delete-delivery-stream ${self.triggers.kinesis_ec2_name}"
+    command = "aws firehose delete-delivery-stream --delivery-stream-name ${self.triggers.kinesis_ec2_name}"
   }
 }
 
