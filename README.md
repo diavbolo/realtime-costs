@@ -105,7 +105,7 @@ In order to tear down the project, run the command `make destroy`
    * Implement Lake Formation for Data Governance
    * Increase the HA with a multi-region setup
    * Add more CloudWatch alerts
-   * Implement proper testing (unit, integration, end-to-end) and monitoring
+   * Implement proper testing (unit, integration, end-to-end) and code quality assessment (coverage, naming convention, security vulnerability)
  
  
 # Known issues
