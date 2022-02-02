@@ -62,7 +62,6 @@ In order to tear down the project, run the command `make destroy`
 # Pending
  
 - Finish the Kinesis Streaming applications deployment (see *Known issues*)
-- Make Git repositories public
  
  
 # Well-architected followed principles
