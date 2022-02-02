@@ -1,0 +1,251 @@
+﻿{
+  "paragraphs": [
+    {
+      "text": "%flink.pyflink\n\nimport boto3\nimport json\nimport base64\nimport requests\n\nfrom requests.auth import HTTPBasicAuth\nfrom botocore.exceptions import ClientError\n\n# Main config variable\nregion_name = 'eu-west-1'\n\n# Retrieve configuration parameters from DynamoDB\nclass Config:\n\n  def __init__(self, table, region_name):\n    self.client = boto3.client('dynamodb', region_name=region_name)\n    self.table = table\n    self.response={}\n\n  def get_config(self, item):\n    try:\n        response = self.client.get_item(\n          TableName = self.table,\n          Key={\n            'id': {\n                'S': item\n            }\n          },\n        )\n    except ClientError as e:\n        raise e\n    \n    return response['Item']['value']['S']\n\n# Retrieve secrets from SecretManager\ndef get_secret(secret_name, region_name):\n\n    # Create a Secrets Manager client\n    session = boto3.session.Session()\n    client = session.client(\n        service_name='secretsmanager',\n        region_name=region_name\n    )\n\n    # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.\n    # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html\n    # We rethrow the exception by default.\n\n    try:\n        get_secret_value_response = client.get_secret_value(\n            SecretId=secret_name\n        )\n    except ClientError as e:\n        if e.response['Error']['Code'] == 'DecryptionFailureException':\n            # Secrets Manager can't decrypt the protected secret text using the provided KMS key.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InternalServiceErrorException':\n            # An error occurred on the server side.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InvalidParameterException':\n            # You provided an invalid value for a parameter.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InvalidRequestException':\n            # You provided a parameter value that is not valid for the current state of the resource.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'ResourceNotFoundException':\n            # We can't find the resource that you asked for.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n    else:\n        # Decrypts secret using the associated KMS CMK.\n        # Depending on whether the secret is a string or binary, one of these fields will be populated.\n        if 'SecretString' in get_secret_value_response:\n            secret = get_secret_value_response['SecretString']\n        else:\n            secret = base64.b64decode(get_secret_value_response['SecretBinary'])\n\n    return json.loads(secret)\n\n# Create ElasticSearch index    \ndef create_es_index(host, index, definition, username, password):\n    headers = {'Content-Type': 'application/json'}\n    return requests.put('https://'+host+'/'+index, headers=headers, auth=HTTPBasicAuth(username, password), data = json.dumps(definition))\n\n# Start    \nconfig = Config('config', region_name)",
+      "user": "anonymous",
+      "dateUpdated": "2022-02-01T10:04:32+0000",
+      "progress": 0,
+      "config": {
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/python",
+        "fontSize": 9,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": []
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1643387834562_796417283",
+      "id": "paragraph_1643387834562_796417283",
+      "dateCreated": "2022-01-28T16:37:14+0000",
+      "dateStarted": "2022-02-01T10:04:32+0000",
+      "dateFinished": "2022-02-01T10:04:33+0000",
+      "status": "FINISHED",
+      "focus": true,
+      "$$hashKey": "object:1814"
+    },
+    {
+      "text": "%flink.pyflink\n\n# Config variables\nes_host = config.get_config('es_host')\nes_port = \"443\"\nes_index = config.get_config('es_index')\nes_table = 'es_table'\nes_secret = config.get_config('es_secret')\ns3_path = 's3://'+config.get_config('s3_bucket')+'/'+config.get_config('s3_folder')\nec2_costs_table = 'flink_ec2_costs_clean'\nec2_instances_stream = config.get_config('kinesis_ec2')\nec2_instances_enriched_stream = config.get_config('kinesis_ec2_enriched')\nec2_instances_read_table = 'flink_ec2_instances_read'\nec2_instances_enriched_read_table = 'flink_ec2_instances_enriched_read'\nec2_instances_enriched_write_table = \"flink_ec2_instances_enriched_write\"\nes_index_definition = {\n    'mappings' : {\n        'properties' : {\n            'ts' : {\n              'type' : 'date'\n            },\n            'window_start' : {\n              'type' : 'date'\n            },\n            'window_end' : {\n              'type' : 'date'\n            },\n            'instanceid' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'accountid' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'region' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'type' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'lifecycle' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'tenancy' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'os' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'sqlserver' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'state' : {\n              'type' : 'text',\n              'fields' : {\n                'keyword' : {\n                  'type' : 'keyword',\n                  'ignore_above' : 256\n                }\n              }\n            },\n            'cost' : {\n              'type' : 'float'\n            }\n          }\n        },\n        'settings' : {\n            'index' : {\n                'number_of_shards' : '5',\n                'number_of_replicas' : '1'\n        }\n    }\n}\n\n# Start\ncredentials = get_secret(es_secret, region_name)\nes_username = credentials['username']\nes_password = credentials['password']\n\nresponse = create_es_index(es_host, es_index, es_index_definition, es_username, es_password)\n# print(response.content)",
+      "user": "anonymous",
+      "dateUpdated": "2022-02-01T10:04:33+0000",
+      "progress": 0,
+      "config": {
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/python",
+        "colWidth": 12,
+        "editorHide": false,
+        "fontSize": 9,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": []
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1643098600290_537176702",
+      "id": "20220109-114946_1563071437",
+      "dateCreated": "2022-01-25T08:16:40+0000",
+      "dateStarted": "2022-02-01T10:04:33+0000",
+      "dateFinished": "2022-02-01T10:04:34+0000",
+      "status": "FINISHED",
+      "$$hashKey": "object:1815"
+    },
+    {
+      "text": "%flink.pyflink\n\nst_env.execute_sql(\"\"\"\nDROP TABLE IF EXISTS {0}\n\"\"\".format(ec2_instances_read_table))\n\nst_env.execute_sql(\"\"\"\nCREATE TABLE {0} (\n\tInstanceId STRING,\n    AccountId STRING,\n    Placement STRING,\n\tState STRING,\n\tInstanceType STRING,\n\tPlatformDetails STRING,\n    InstanceLifecycle STRING,\n    ts AS PROCTIME(),\n    ArrivalTime TIMESTAMP(3) METADATA FROM 'timestamp' VIRTUAL,\n    WATERMARK FOR ArrivalTime AS `ArrivalTime` - INTERVAL '5' SECOND,\n    PRIMARY KEY (Placement, PlatformDetails, InstanceType) NOT ENFORCED\n)\nPARTITIONED BY (InstanceId)\nWITH (\n    'connector' = 'kinesis',\n    'stream' = '{1}',\n    'aws.region' = '{2}',\n    'format' = 'json',\n    'scan.stream.initpos' = 'LATEST',\n    'json.timestamp-format.standard' = 'ISO-8601',\n    'scan.stream.recordpublisher' = 'EFO',\n    'scan.stream.efo.consumername' = 'flink'\n)\n\"\"\".format(ec2_instances_read_table, ec2_instances_stream, region_name))\n\nst_env.execute_sql(\"\"\"\nDROP TABLE IF EXISTS {0}\n\"\"\".format(ec2_instances_enriched_write_table))\n\nst_env.execute_sql(\"\"\"\nCREATE TABLE {0} (\n\tinstanceid STRING,\n    accountId STRING,\n    region STRING,\n    `type` STRING,\n\tlifecycle STRING,\n\ttenancy STRING,\n\tos STRING,\n    sqlserver STRING,\n    state STRING,\n    cost DOUBLE,\n    ts AS PROCTIME(),   \n    ArrivalTime TIMESTAMP(3) METADATA FROM 'timestamp' VIRTUAL,\n    WATERMARK FOR ArrivalTime AS `ArrivalTime` - INTERVAL '5' SECOND,\n    PRIMARY KEY (region, `type`, tenancy, os, sqlserver) NOT ENFORCED\n) WITH (\n    'connector' = 'kinesis',\n    'stream' = '{1}',\n    'aws.region' = '{2}',\n    'format' = 'json'\n)\n\"\"\".format(ec2_instances_enriched_write_table, ec2_instances_enriched_stream, region_name))\n\nst_env.execute_sql(\"\"\"\nDROP TABLE IF EXISTS {0}\n\"\"\".format(ec2_instances_enriched_read_table))\n\nst_env.execute_sql(\"\"\"\nCREATE TABLE {0} (\n\tinstanceid STRING,\n    accountId STRING,\n    region STRING,\n    `type` STRING,\n\tlifecycle STRING,\n\ttenancy STRING,\n\tos STRING,\n    sqlserver STRING,\n    state STRING,\n    cost DOUBLE,\n    ts AS PROCTIME(),\n    ArrivalTime TIMESTAMP(3) METADATA FROM 'timestamp' VIRTUAL,\n    WATERMARK FOR ArrivalTime AS `ArrivalTime` - INTERVAL '5' SECOND,\n    PRIMARY KEY (region, `type`, tenancy, os, sqlserver) NOT ENFORCED\n) WITH (\n    'connector' = 'kinesis',\n    'stream' = '{1}',\n    'aws.region' = '{2}',\n    'format' = 'json',\n    'json.timestamp-format.standard' = 'ISO-8601',\n    'scan.stream.initpos' = 'LATEST',\n    'scan.stream.recordpublisher' = 'EFO',\n    'scan.stream.efo.consumername' = 'flink'\n)\n\"\"\".format(ec2_instances_enriched_read_table, ec2_instances_enriched_stream, region_name))\n\nst_env.execute_sql(\"\"\"\nDROP TABLE IF EXISTS {0}\n\"\"\".format(es_table))\n\nst_env.execute_sql(\"\"\"\nCREATE TABLE {0} (\n    ts STRING,\n    window_start STRING,\n    window_end STRING,\n    instanceid STRING,\n    accountid STRING,\n    region STRING,\n    `type` STRING,\n    lifecycle STRING,\n    tenancy STRING,\n    os STRING,\n    sqlserver STRING,\n    state STRING,\n    cost DOUBLE,\n    -- This will create a unique record, by excluding arrivaltime will become an UPSERT (the call is always BulkUpsert)\n    PRIMARY KEY (window_start, window_end, accountid, instanceid) NOT ENFORCED \n)  WITH (\n  'connector' = 'elasticsearch-7',\n  'hosts' = 'https://{1}:{2}',\n  'index' = '{3}',\n  'username' = '{4}',\n  'password' = '{5}'\n)\n\"\"\".format(es_table, es_host, es_port, es_index, es_username, es_password))",
+      "user": "anonymous",
+      "dateUpdated": "2022-02-01T10:04:34+0000",
+      "progress": 0,
+      "config": {
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/python",
+        "colWidth": 12,
+        "editorHide": false,
+        "fontSize": 9,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "<pyflink.table.table_result.TableResult at 0x7ff09f505550>"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1643098600291_911814278",
+      "id": "20220109-114946_13035251",
+      "dateCreated": "2022-01-25T08:16:40+0000",
+      "dateStarted": "2022-02-01T10:04:34+0000",
+      "dateFinished": "2022-02-01T10:04:44+0000",
+      "status": "FINISHED",
+      "$$hashKey": "object:1816"
+    },
+    {
+      "text": "%flink.pyflink\n\nst_env.execute_sql(\"\"\"\nINSERT INTO {0}\nSELECT\n    i.instanceid,\n    i.accountId,\n    i.region,\n    i.`type`,\n    i.lifecycle,\n    i.tenancy,\n    i.os,\n    i.sqlserver,\n    i.state,\n    CASE\n        WHEN i.state in ('stopped', 'terminated') THEN 0\n        WHEN i.lifecycle='spot' THEN t.cost*0.8\n        ELSE t.cost\n    END AS cost\nFROM\n(\n    SELECT\n        InstanceId AS instanceid,\n        AccountId AS accountId,\n        SUBSTR(jsonextract('AvailabilityZone', Placement),1,CHAR_LENGTH(jsonextract('AvailabilityZone', Placement))-1) AS region,\n        InstanceType AS `type`,\n        CASE \n            WHEN InstanceLifecycle = 'spot' THEN 'spot'\n            ELSE 'on-demand'\n        END AS lifecycle,\n        CASE \n            WHEN jsonextract('Tenancy', Placement) = 'default' THEN 'Shared'\n            ELSE 'Dedicated'\n        END AS tenancy,\n        CASE\n            WHEN PlatformDetails = 'Linux/UNIX' THEN 'Linux'\n            WHEN PlatformDetails LIKE '%with SQL%' THEN SUBSTR(PlatformDetails,1,position('with' IN PlatformDetails)-2)\n            ELSE PlatformDetails\n        END AS os,\n        CASE \n            WHEN PlatformDetails LIKE '%with SQL%' THEN SUBSTR(PlatformDetails,position('SQL' IN PlatformDetails)) \n            ELSE ''\n        END AS sqlserver,\n        jsonextract('Name', State) AS state,\n        ts\n    FROM {1}\n) i\nLEFT JOIN {2} FOR SYSTEM_TIME AS OF i.ts AS t\nON t.region = i.region\nAND t.tenancy = i.tenancy\nAND t.`type` = i.`type`\nAND t.os = i.os\nAND t.sqlserver = i.sqlserver\n\"\"\".format(ec2_instances_enriched_write_table, ec2_instances_read_table, ec2_costs_table))",
+      "user": "anonymous",
+      "dateUpdated": "2022-02-01T10:05:52+0000",
+      "progress": 0,
+      "config": {
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/python",
+        "colWidth": 12,
+        "editorHide": false,
+        "fontSize": 9,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "<pyflink.table.table_result.TableResult at 0x7ff09e38bdc0>"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "FLINK JOB",
+          "tooltip": "View in Flink web UI",
+          "group": "flink",
+          "values": [
+            {
+              "jobUrl": "/flinkdashboard/#/job/ae2abf3362fdcd7df7d89488be90cd58",
+              "$$hashKey": "object:2556"
+            }
+          ],
+          "interpreterSettingId": "flink"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1643098600291_101654232",
+      "id": "20220109-114946_773278853",
+      "dateCreated": "2022-01-25T08:16:40+0000",
+      "dateStarted": "2022-02-01T10:05:52+0000",
+      "dateFinished": "2022-02-01T10:06:12+0000",
+      "status": "FINISHED",
+      "$$hashKey": "object:1817"
+    },
+    {
+      "text": "%flink.pyflink\n\nst_env.execute_sql(\"\"\"\nINSERT INTO {0}\nSELECT\n    CAST(UNIX_TIMESTAMP(CAST(CURRENT_TIMESTAMP AS STRING)) AS STRING) || CAST(DATE_FORMAT(CURRENT_TIMESTAMP,'SSS') AS STRING),\n    CAST(UNIX_TIMESTAMP(CAST(L.window_start AS STRING)) AS STRING) || CAST(DATE_FORMAT(L.window_start,'SSS') AS STRING),\n    CAST(UNIX_TIMESTAMP(CAST(L.window_end AS STRING)) AS STRING) || CAST(DATE_FORMAT(L.window_end,'SSS') AS STRING),\n    L.instanceid,\n    L.accountId,\n    L.region,\n    L.`type`,\n    L.lifecycle,\n    L.tenancy,\n    L.os,\n    L.sqlserver,\n    L.state,\n    (MAX(L.cost)/60)*TIMESTAMPDIFF(MINUTE, L.window_start, L.window_end)\nFROM (\n    SELECT\n        window_start,\n        window_end,\n        instanceid,\n        accountId,\n        region,\n        `type`,\n    \tlifecycle,\n    \ttenancy,\n    \tos,\n        sqlserver,\n        state,\n        cost\n    FROM TABLE(TUMBLE(TABLE {1}, DESCRIPTOR(ArrivalTime), INTERVAL '2' MINUTES)) i\n) L\nGROUP BY \n    L.window_start, \n    L.window_end,\n    L.instanceid,\n    L.accountId,\n    L.region,\n    L.`type`,\n    L.lifecycle,\n    L.tenancy,\n    L.os,\n    L.sqlserver,\n    L.state\n\"\"\".format(es_table, ec2_instances_enriched_read_table))",
+      "user": "anonymous",
+      "dateUpdated": "2022-02-01T10:05:01+0000",
+      "progress": 0,
+      "config": {
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/python",
+        "colWidth": 12,
+        "editorHide": false,
+        "fontSize": 9,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "<pyflink.table.table_result.TableResult at 0x7ff09e747670>"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {
+        "jobUrl": {
+          "propertyName": "jobUrl",
+          "label": "FLINK JOB",
+          "tooltip": "View in Flink web UI",
+          "group": "flink",
+          "values": [
+            {
+              "jobUrl": "/flinkdashboard/#/job/bacd7a88d5d43e193b6ec0130d9286a5",
+              "$$hashKey": "object:2482"
+            }
+          ],
+          "interpreterSettingId": "flink"
+        }
+      },
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1643098600297_990007445",
+      "id": "20220109-114946_1081997714",
+      "dateCreated": "2022-01-25T08:16:40+0000",
+      "dateStarted": "2022-02-01T10:05:01+0000",
+      "dateFinished": "2022-02-01T10:05:18+0000",
+      "status": "FINISHED",
+      "$$hashKey": "object:1818"
+    }
+  ],
+  "name": "costs_2_es",
+  "id": "2GT71PGQ1",
+  "defaultInterpreterGroup": "flink",
+  "version": "0.9.0",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {},
+  "config": {
+    "isZeppelinNotebookCronEnable": false,
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {},
+  "path": "/costs_2_es"
+}

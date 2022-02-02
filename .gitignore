@@ -1,0 +1,14 @@
+**/.terraform/*
+**/.terraform.d/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+.kube/*
+
+config.env
+**/temp/*
+
+resources/flink-udf/target/*
+.DS_Store

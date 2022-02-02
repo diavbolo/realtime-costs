@@ -1,0 +1,92 @@
+﻿{
+  "paragraphs": [
+    {
+      "text": "%flink.pyflink\nimport requests\n\ndef cancel_jobs():\n    r = requests.get(\"https://zeppelin-flink:8082/jobs\", verify=False)\n    jobs = r.json()['jobs']\n    \n    for job in jobs:\n        if (job[\"status\"] == \"RUNNING\"):\n            print(requests.patch(\"https://zeppelin-flink:8082/jobs/{}\".format(job[\"id\"]), verify=False))\n\ncancel_jobs()",
+      "user": "anonymous",
+      "dateUpdated": "2022-01-12T11:55:04+0000",
+      "progress": 0,
+      "config": {
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/python",
+        "fontSize": 9,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "<Response [202]>\n<Response [202]>\n/opt/conda/lib/python3.8/site-packages/urllib3/connectionpool.py:1013: InsecureRequestWarning: Unverified HTTPS request is being made to host 'zeppelin-flink'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings\n  warnings.warn(\n/opt/conda/lib/python3.8/site-packages/urllib3/connectionpool.py:1013: InsecureRequestWarning: Unverified HTTPS request is being made to host 'zeppelin-flink'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings\n  warnings.warn(\n/opt/conda/lib/python3.8/site-packages/urllib3/connectionpool.py:1013: InsecureRequestWarning: Unverified HTTPS request is being made to host 'zeppelin-flink'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings\n  warnings.warn(\n"
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1641987555725_966457629",
+      "id": "paragraph_1641987555725_966457629",
+      "dateCreated": "2022-01-12T11:39:15+0000",
+      "dateStarted": "2022-01-12T11:55:04+0000",
+      "dateFinished": "2022-01-12T11:55:05+0000",
+      "status": "FINISHED",
+      "focus": true,
+      "$$hashKey": "object:28017"
+    },
+    {
+      "text": "%flink.pyflink\n",
+      "user": "anonymous",
+      "dateUpdated": "2022-01-12T11:55:04+0000",
+      "progress": 0,
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false,
+          "completionKey": "TAB",
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1641988504772_1295406951",
+      "id": "paragraph_1641988504772_1295406951",
+      "dateCreated": "2022-01-12T11:55:04+0000",
+      "status": "READY",
+      "$$hashKey": "object:28018"
+    }
+  ],
+  "name": "cancel_all_jobs",
+  "id": "2GT8689WZ",
+  "defaultInterpreterGroup": "flink",
+  "version": "0.9.0",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {},
+  "config": {
+    "isZeppelinNotebookCronEnable": false,
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {},
+  "path": "/cancel_all_jobs"
+}

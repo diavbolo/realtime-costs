@@ -1,0 +1,4 @@
+org/apache/zeppelin/flink/udf/WeightedAvg.class
+org/apache/zeppelin/flink/udf/Top2Accum.class
+org/apache/zeppelin/flink/udf/WeightedAvgAccum.class
+org/apache/zeppelin/flink/udf/Top2.class
