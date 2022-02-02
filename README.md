@@ -38,7 +38,7 @@ The Git repositories related to this project are:
 # Setup process
  
 These are the steps that need to be followed:
-1. (*AWS console > Route53*) Create a domain
+1. (*AWS console > Route53*) Register a domain
 2. Clone this repository to your computer
 3. Rename `config.env.tpl` to `config.env` and adjust Terraform state variables to indicate the bucket, the file and the region where it needs to be stored
 4. Adjust project variables in `variables.tf` paying attention to the comments
@@ -106,7 +106,7 @@ In order to tear down the project, run the command `make destroy`
    * Increase the HA with a multi-region setup
    * Add more CloudWatch alerts
    * Implement proper testing (unit, integration, end-to-end, load/stress) and code quality assessment (coverage, naming convention, security vulnerability)
-   * Move from Terraform to CloudFormation (no state required, native integration, domain creation)
+   * Move from Terraform to CloudFormation (no state required, native integration, domain registration)
  
  
 # Known issues

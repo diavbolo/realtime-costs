@@ -4,7 +4,7 @@ variable "project_name" {
   default = "realtime-costs"
 }
 
-# Manually create this domain in Route53
+# Manually register this domain in Route53
 variable "domain_name" {
   default = "realtime-costs.com"
 }
