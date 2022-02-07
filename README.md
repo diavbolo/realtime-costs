@@ -104,7 +104,7 @@ In order to tear down the project, run the command `make destroy`
    * Implement S3 server side encryption
    * Implement Lake Formation for Data Governance
    * Increase the HA with a multi-region setup
-   * Consider switching from RDS MySQL to Aurora MySQL serverless v2 with Aurora Global Database for DR
+   * Consider switching from RDS MySQL to Aurora MySQL serverless (PAYG) v2 with Aurora Global Database (for DR)
    * Add more CloudWatch alerts
    * Implement proper testing (unit, integration, end-to-end, load/stress) and code quality assessment (coverage, naming convention, security vulnerability)
    * Move from Terraform to CloudFormation (no state required, native integration, domain registration)
