@@ -1,7 +1,0 @@
-/Users/dmunoz/code/flink-udf/src/main/java/org/apache/zeppelin/flink/udf/Top2.java
-/Users/dmunoz/code/flink-udf/src/main/java/org/apache/zeppelin/flink/udf/JSONExtract.java
-/Users/dmunoz/code/flink-udf/src/main/java/org/apache/zeppelin/flink/udf/JavaSplit.java
-/Users/dmunoz/code/flink-udf/src/main/java/org/apache/zeppelin/flink/udf/WeightedAvg.java
-/Users/dmunoz/code/flink-udf/src/main/java/org/apache/zeppelin/flink/udf/Top2Accum.java
-/Users/dmunoz/code/flink-udf/src/main/java/org/apache/zeppelin/flink/udf/WeightedAvgAccum.java
-/Users/dmunoz/code/flink-udf/src/main/java/org/apache/zeppelin/flink/udf/JavaUpper.java

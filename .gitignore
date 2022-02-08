@@ -10,5 +10,6 @@
 config.env
 **/temp/*
 
-resources/flink-udf/target/*
 .DS_Store
+
+**/target/*
