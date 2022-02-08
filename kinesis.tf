@@ -355,12 +355,21 @@ resource "aws_glue_catalog_table" "ec2_streams_schema" {
 
 # Dynamic partitioning cannot be set yet from TF so it needs to be deployed via AWS cli
 resource "null_resource" "kinesis_firehose_create" {
-  depends_on = [aws_iam_role.kinesis, aws_kinesis_stream.kinesis, aws_glue_catalog_table.ec2_streams_schema, local_file.kinesis_firehose]
+  depends_on = [aws_iam_role.kinesis, aws_kinesis_stream.kinesis, aws_glue_catalog_table.ec2_streams_schema]
+
+  triggers = {
+    md5 = md5(local_file.kinesis_firehose.content)
+  }
 
   provisioner "local-exec" {
-    when    = create
+    on_failure = continue
+    command    = "aws firehose delete-delivery-stream --delivery-stream-name ${local.kinesis_ec2_name}"
+  }
+
+  provisioner "local-exec" {
     command = "aws firehose create-delivery-stream --cli-input-json file://${local_file.kinesis_firehose.filename}"
   }
+
 }
 
 resource "null_resource" "kinesis_firehose_destroy" {
@@ -458,7 +467,19 @@ resource "local_file" "kinesis_firehose" {
 
 # Not available yet in Terraform so it needs to be deployed via AWS cli
 resource "null_resource" "kinesis_studio_create" {
-  depends_on = [aws_iam_role.kinesis_studio, aws_kinesis_stream.kinesis, aws_glue_catalog_table.ec2_streams_schema, local_file.kinesis_studio]
+  depends_on = [aws_iam_role.kinesis_studio, aws_kinesis_stream.kinesis, aws_glue_catalog_table.ec2_streams_schema]
+
+  triggers = {
+    md5 = md5(local_file.kinesis_studio.content)
+  }
+
+  provisioner "local-exec" {
+    on_failure = continue
+    command    = <<EOT
+      aws kinesisanalyticsv2 stop-application --application-name ${local.kinesis_studio_name};
+      aws kinesisanalyticsv2 delete-application --application-name ${local.kinesis_studio_name} --create-timestamp $(aws kinesisanalyticsv2 describe-application --application-name realtime-costs-kinesis-studio | jq '.ApplicationDetail.CreateTimestamp')
+    EOT
+  }
 
   provisioner "local-exec" {
     command = <<EOT
@@ -477,7 +498,7 @@ resource "null_resource" "kinesis_studio_destroy" {
     when    = destroy
     command = <<EOT
       aws kinesisanalyticsv2 stop-application --application-name ${self.triggers.kinesis_studio_name};
-      aws kinesisanalyticsv2 delete-application --application-name ${self.triggers.kinesis_studio_name}
+      aws kinesisanalyticsv2 delete-application --application-name ${self.triggers.kinesis_studio_name} --create-timestamp $(aws kinesisanalyticsv2 describe-application --application-name realtime-costs-kinesis-studio | jq '.ApplicationDetail.CreateTimestamp')
     EOT
   }
 }
@@ -490,6 +511,11 @@ resource "local_file" "kinesis_studio" {
       "RuntimeEnvironment" : "ZEPPELIN-FLINK-2_0",
       "ApplicationMode" : "INTERACTIVE",
       "ServiceExecutionRole" : aws_iam_role.kinesis_studio.arn,
+      "CloudWatchLoggingOptions" : [
+        {
+          "LogStreamARN" : aws_cloudwatch_log_stream.kinesis_studio.arn
+        }
+      ],
       "ApplicationConfiguration" : {
         "VpcConfigurations" : [
           {
@@ -582,6 +608,14 @@ resource "local_file" "kinesis_studio" {
       }
     }
   )
+}
+resource "aws_cloudwatch_log_stream" "kinesis_studio" {
+  name           = local.kinesis_studio_name
+  log_group_name = aws_cloudwatch_log_group.kinesis_studio.name
+}
+
+resource "aws_cloudwatch_log_group" "kinesis_studio" {
+  name = "/aws/kinesis-analytics/${local.kinesis_studio_name}"
 }
 
 resource "aws_s3_bucket_object" "flink_connector_jdbc" {
