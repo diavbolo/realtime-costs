@@ -1,18 +1,19 @@
 
 resource "aws_db_instance" "mysql" {
-  identifier             = local.mysql_name
-  allocated_storage      = var.mysql_storage
-  engine                 = "mysql"
-  engine_version         = "5.7"
-  instance_class         = var.mysql_instance
-  name                   = var.mysql_db_name
-  username               = var.mysql_user
-  password               = local.db_creds.password
-  parameter_group_name   = "default.mysql5.7"
-  skip_final_snapshot    = true
-  vpc_security_group_ids = ["${aws_security_group.mysql.id}"]
-  publicly_accessible    = true
-  db_subnet_group_name   = aws_db_subnet_group.mysql.name
+  identifier               = local.mysql_name
+  allocated_storage        = var.mysql_storage
+  engine                   = "mysql"
+  engine_version           = "5.7"
+  instance_class           = var.mysql_instance
+  name                     = var.mysql_db_name
+  username                 = var.mysql_user
+  password                 = local.db_creds.password
+  parameter_group_name     = "default.mysql5.7"
+  skip_final_snapshot      = true
+  vpc_security_group_ids   = ["${aws_security_group.mysql.id}"]
+  publicly_accessible      = true
+  db_subnet_group_name     = aws_db_subnet_group.mysql.name
+  delete_automated_backups = true
 
   provisioner "local-exec" {
     command = "mysql --host=${local.mysql_subdomain_name} --user=${var.mysql_user} --password=${local.db_creds.password} --database=${var.mysql_db_name} < ${local_file.create_table.filename}"

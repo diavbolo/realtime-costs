@@ -85,10 +85,12 @@ resource "aws_iam_role_policy_attachment" "attach_kinesis_policy_to_kinesis_role
 }
 
 resource "aws_kinesis_stream" "kinesis" {
-  name                = local.kinesis_ec2_name
-  retention_period    = 24
-  encryption_type     = "NONE"
-  shard_level_metrics = ["IncomingBytes", "OutgoingBytes"]
+  name                      = local.kinesis_ec2_name
+  retention_period          = 24
+  encryption_type           = "NONE"
+  shard_level_metrics       = ["IncomingBytes", "OutgoingBytes"]
+  enforce_consumer_deletion = true
+
 
   stream_mode_details {
     stream_mode = "ON_DEMAND"
@@ -96,10 +98,11 @@ resource "aws_kinesis_stream" "kinesis" {
 }
 
 resource "aws_kinesis_stream" "kinesis_enriched" {
-  name                = local.kinesis_ec2_enriched_name
-  retention_period    = 24
-  encryption_type     = "NONE"
-  shard_level_metrics = ["IncomingBytes", "OutgoingBytes"]
+  name                      = local.kinesis_ec2_enriched_name
+  retention_period          = 24
+  encryption_type           = "NONE"
+  shard_level_metrics       = ["IncomingBytes", "OutgoingBytes"]
+  enforce_consumer_deletion = true
 
   stream_mode_details {
     stream_mode = "ON_DEMAND"
@@ -704,6 +707,12 @@ data "aws_iam_policy_document" "kinesis_studio" {
   statement {
     effect    = "Allow"
     actions   = ["kinesisanalytics:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["cloudwatch:PutMetricData"]
     resources = ["*"]
   }
 
