@@ -358,19 +358,15 @@ resource "aws_glue_catalog_table" "ec2_streams_schema" {
 
 # Dynamic partitioning cannot be set yet from TF so it needs to be deployed via AWS cli
 resource "null_resource" "kinesis_firehose_create" {
-  depends_on = [aws_iam_role.kinesis, aws_kinesis_stream.kinesis, aws_glue_catalog_table.ec2_streams_schema]
+  depends_on = [aws_iam_role_policy_attachment.attach_kinesis_policy_to_kinesis_role, aws_kinesis_stream.kinesis, aws_glue_catalog_table.ec2_streams_schema]
 
   triggers = {
-    md5 = md5(local_file.kinesis_firehose.content)
+    md5              = md5(local_file.kinesis_firehose.content)
+    kinesis_ec2_name = local.kinesis_ec2_name
   }
 
   provisioner "local-exec" {
-    on_failure = continue
-    command    = "aws firehose delete-delivery-stream --delivery-stream-name ${local.kinesis_ec2_name}"
-  }
-
-  provisioner "local-exec" {
-    command = "aws firehose create-delivery-stream --cli-input-json file://${local_file.kinesis_firehose.filename}"
+    command = "${path.module}/resources/scripts/kinesis-firehose.sh create ${self.triggers.kinesis_ec2_name} ${local_file.kinesis_firehose.filename}"
   }
 
 }
@@ -382,8 +378,9 @@ resource "null_resource" "kinesis_firehose_destroy" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "aws firehose delete-delivery-stream --delivery-stream-name ${self.triggers.kinesis_ec2_name}"
+    command = "${path.module}/resources/scripts/kinesis-firehose.sh delete ${self.triggers.kinesis_ec2_name}"
   }
+
 }
 
 resource "local_file" "kinesis_firehose" {
@@ -470,26 +467,17 @@ resource "local_file" "kinesis_firehose" {
 
 # Not available yet in Terraform so it needs to be deployed via AWS cli
 resource "null_resource" "kinesis_studio_create" {
-  depends_on = [aws_iam_role.kinesis_studio, aws_kinesis_stream.kinesis, aws_glue_catalog_table.ec2_streams_schema]
+  depends_on = [aws_iam_role_policy_attachment.attach_kinesis_studio_policy_to_kinesis_studio_role, aws_kinesis_stream.kinesis, aws_glue_catalog_table.ec2_streams_schema]
 
   triggers = {
-    md5 = md5(local_file.kinesis_studio.content)
+    md5                 = md5(local_file.kinesis_studio.content)
+    kinesis_studio_name = local.kinesis_studio_name
   }
 
   provisioner "local-exec" {
-    on_failure = continue
-    command    = <<EOT
-      aws kinesisanalyticsv2 stop-application --application-name ${local.kinesis_studio_name};
-      aws kinesisanalyticsv2 delete-application --application-name ${local.kinesis_studio_name} --create-timestamp $(aws kinesisanalyticsv2 describe-application --application-name realtime-costs-kinesis-studio | jq '.ApplicationDetail.CreateTimestamp')
-    EOT
+    command = "${path.module}/resources/scripts/kinesis-studio.sh create ${self.triggers.kinesis_studio_name} ${local_file.kinesis_studio.filename}"
   }
 
-  provisioner "local-exec" {
-    command = <<EOT
-      aws kinesisanalyticsv2 create-application --cli-input-json file://${local_file.kinesis_studio.filename};
-      aws kinesisanalyticsv2 start-application --application-name ${local.kinesis_studio_name}
-    EOT
-  }
 }
 
 resource "null_resource" "kinesis_studio_destroy" {
@@ -499,11 +487,9 @@ resource "null_resource" "kinesis_studio_destroy" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = <<EOT
-      aws kinesisanalyticsv2 stop-application --application-name ${self.triggers.kinesis_studio_name};
-      aws kinesisanalyticsv2 delete-application --application-name ${self.triggers.kinesis_studio_name} --create-timestamp $(aws kinesisanalyticsv2 describe-application --application-name realtime-costs-kinesis-studio | jq '.ApplicationDetail.CreateTimestamp')
-    EOT
+    command = "${path.module}/resources/scripts/kinesis-studio.sh delete ${self.triggers.kinesis_studio_name}"
   }
+
 }
 
 resource "local_file" "kinesis_studio" {

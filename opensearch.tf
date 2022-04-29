@@ -89,11 +89,11 @@ module "elasticsearch" {
 }
 
 resource "aws_cloudwatch_log_group" "search_slow_logs" {
-  name = "/aws/elasticsearch/search_slow_logs"
+  name = "/aws/elasticsearch/${local.es_name}/search_slow_logs"
 }
 
 resource "aws_cloudwatch_log_group" "log_publishing_options" {
-  name = "/aws/elasticsearch/log_publishing_options"
+  name = "/aws/elasticsearch/${local.es_name}/log_publishing_options"
 }
 
 resource "random_password" "es_creds" {
@@ -107,7 +107,8 @@ resource "random_password" "es_creds" {
 }
 
 resource "aws_secretsmanager_secret" "es_creds" {
-  name = "${local.secrets_name}/elasticsearch/credentials"
+  name                    = "${local.secrets_name}/elasticsearch"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "es_creds" {

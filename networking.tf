@@ -2,7 +2,8 @@
 # route to the Internet Gateway
 
 resource "aws_vpc" "main" {
-  cidr_block = var.vpc_subnet
+  cidr_block           = var.vpc_subnet
+  enable_dns_hostnames = true
 }
 
 resource "aws_internet_gateway" "public_network" {

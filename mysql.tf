@@ -14,10 +14,14 @@ resource "aws_db_instance" "mysql" {
   publicly_accessible      = true
   db_subnet_group_name     = aws_db_subnet_group.mysql.name
   delete_automated_backups = true
+}
+
+resource "null_resource" "mysql_create_table" {
 
   provisioner "local-exec" {
-    command = "mysql --host=${local.mysql_subdomain_name} --user=${var.mysql_user} --password=${local.db_creds.password} --database=${var.mysql_db_name} < ${local_file.create_table.filename}"
+    command = "mysql --host=${aws_route53_record.mysql_subdomain.name} --user=${var.mysql_user} --password=${local.db_creds.password} --database=${var.mysql_db_name} < ${local_file.create_table.filename}"
   }
+
 }
 
 resource "aws_db_subnet_group" "mysql" {
@@ -114,13 +118,13 @@ EOF
 }
 
 resource "random_password" "db_creds" {
-  length           = 16
-  special          = true
-  override_special = "_%@"
+  length  = 16
+  special = false
 }
 
 resource "aws_secretsmanager_secret" "db_creds" {
-  name = "${local.secrets_name}/mysql/credentials"
+  name                    = "${local.secrets_name}/mysql"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "db_creds" {
