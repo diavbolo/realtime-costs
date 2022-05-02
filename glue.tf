@@ -7,7 +7,7 @@ resource "aws_glue_crawler" "ec2_costs" {
   schedule      = "cron(0 */8 * * ? *)"
 
   s3_target {
-    path = "s3://${aws_s3_bucket.s3_bucket_costs.bucket}/"
+    path = "s3://${aws_s3_bucket.data.bucket}/"
   }
 
   jdbc_target {
@@ -73,8 +73,8 @@ data "aws_iam_policy_document" "ec2_costs_policy1" {
       "s3:List*"
     ]
     resources = [
-      "${aws_s3_bucket.s3_bucket_costs.arn}",
-      "${aws_s3_bucket.s3_bucket_costs.arn}/*"
+      "${aws_s3_bucket.data.arn}",
+      "${aws_s3_bucket.data.arn}/*"
     ]
   }
 }

@@ -39,8 +39,8 @@ module "mwaa" {
             "s3:Put*"
           ],
           "Resource" : [
-            "${aws_s3_bucket.s3_bucket_costs.arn}",
-            "${aws_s3_bucket.s3_bucket_costs.arn}/*"
+            "${aws_s3_bucket.data.arn}",
+            "${aws_s3_bucket.data.arn}/*"
           ]
         },
         {

@@ -11,10 +11,18 @@ f_status () {
 }
 
 f_wait () {
-    while [ ${STATUS} != $1 ]; do
-        sleep 10
-        f_status
-    done
+    if [ -z $1 ]; then
+        unset STATUS
+        while [ -z ${STATUS} ]; do
+            sleep 10
+            f_status
+        done
+    else       
+        while [ ${STATUS} != $1 ]; do
+            sleep 10
+            f_status
+        done
+    fi
 }
 
 f_create() {
@@ -35,6 +43,8 @@ f_delete() {
 
         if [ ${STATUS} == 'ACTIVE' ]; then
             aws firehose delete-delivery-stream --delivery-stream-name ${NAME}
+            f_status
+            f_wait
         fi
         
     fi

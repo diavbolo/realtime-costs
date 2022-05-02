@@ -69,7 +69,7 @@ EOF
 
 resource "aws_lambda_function" "readwriteLambda" {
   function_name = local.lambda_name
-  s3_bucket     = aws_s3_bucket.s3_bucket_airflow.bucket
+  s3_bucket     = aws_s3_bucket.data.bucket
   s3_key        = "lambda/${data.archive_file.lambda_zip.output_base64sha256}.zip"
   role          = aws_iam_role.readwriteRole.arn
   handler       = "${local.lambda_name}.handler"
@@ -87,13 +87,13 @@ resource "aws_lambda_function" "readwriteLambda" {
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "${path.module}/resources/lambda/realtime-costs-lambda.py"
+  source_file = "${path.module}/resources/lambda/${local.lambda_name}.py"
   output_path = "${path.module}/temp/${local.lambda_name}.zip"
 }
 
 resource "aws_s3_bucket_object" "copy_lambda" {
 
-  bucket = aws_s3_bucket.s3_bucket_airflow.bucket
+  bucket = aws_s3_bucket.data.bucket
   key    = "lambda/${data.archive_file.lambda_zip.output_base64sha256}.zip"
   source = "${path.module}/temp/${local.lambda_name}.zip"
 

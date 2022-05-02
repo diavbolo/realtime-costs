@@ -108,7 +108,7 @@ resource "aws_s3_bucket_public_access_block" "data_replica" {
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket" "s3_bucket_costs" {
+resource "aws_s3_bucket" "data" {
   bucket = var.bucket_data_name
   acl    = "private"
 
@@ -125,8 +125,8 @@ resource "aws_s3_bucket" "s3_bucket_costs" {
   force_destroy = true
 }
 
-resource "aws_s3_bucket_public_access_block" "s3_bucket_costs" {
-  bucket = aws_s3_bucket.s3_bucket_costs.id
+resource "aws_s3_bucket_public_access_block" "data" {
+  bucket = aws_s3_bucket.data.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -136,7 +136,7 @@ resource "aws_s3_bucket_public_access_block" "s3_bucket_costs" {
 
 resource "aws_s3_bucket_replication_configuration" "replication" {
   role   = aws_iam_role.replication.arn
-  bucket = aws_s3_bucket.s3_bucket_costs.id
+  bucket = aws_s3_bucket.data.id
 
   rule {
     id     = "everything-without-filters"
@@ -182,7 +182,7 @@ resource "aws_iam_policy" "replication" {
         "s3:ListBucket"
       ],
       "Effect": "Allow",
-      "Resource": "${aws_s3_bucket.s3_bucket_costs.arn}"
+      "Resource": "${aws_s3_bucket.data.arn}"
     },
     {
       "Action": [
@@ -190,7 +190,7 @@ resource "aws_iam_policy" "replication" {
         "s3:GetObjectVersionAcl"
       ],
       "Effect": "Allow",
-      "Resource": "${aws_s3_bucket.s3_bucket_costs.arn}/*"
+      "Resource": "${aws_s3_bucket.data.arn}/*"
     },
     {
       "Action": [

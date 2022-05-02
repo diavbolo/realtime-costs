@@ -65,8 +65,8 @@ data "aws_iam_policy_document" "kinesis" {
       "s3:Put*"
     ]
     resources = [
-      "${aws_s3_bucket.s3_bucket_costs.arn}",
-      "${aws_s3_bucket.s3_bucket_costs.arn}/*"
+      "${aws_s3_bucket.data.arn}",
+      "${aws_s3_bucket.data.arn}/*"
     ]
   }
 
@@ -121,7 +121,7 @@ resource "aws_glue_catalog_table" "ec2_streams_schema" {
   }
 
   storage_descriptor {
-    location      = "s3://${aws_s3_bucket.s3_bucket_costs.bucket}/${var.bucket_folder_ec2_streams}/"
+    location      = "s3://${aws_s3_bucket.data.bucket}/${var.bucket_folder_ec2_streams}/"
     input_format  = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"
     output_format = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"
 
@@ -395,7 +395,7 @@ resource "local_file" "kinesis_firehose" {
       },
       "ExtendedS3DestinationConfiguration" : {
         "RoleARN" : aws_iam_role.kinesis.arn,
-        "BucketARN" : aws_s3_bucket.s3_bucket_costs.arn,
+        "BucketARN" : aws_s3_bucket.data.arn,
         "BufferingHints" : {
           "SizeInMBs" : 64,
           "IntervalInSeconds" : 120
@@ -535,7 +535,7 @@ resource "local_file" "kinesis_studio" {
           },
           "DeployAsApplicationConfiguration" : {
             "S3ContentLocation" : {
-              "BucketARN" : aws_s3_bucket.s3_bucket_costs.arn,
+              "BucketARN" : aws_s3_bucket.data.arn,
               "BasePath" : "code/"
             }
           },
@@ -567,28 +567,28 @@ resource "local_file" "kinesis_studio" {
             {
               "ArtifactType" : "DEPENDENCY_JAR",
               "S3ContentLocation" : {
-                "BucketARN" : aws_s3_bucket.s3_bucket_costs.arn,
+                "BucketARN" : aws_s3_bucket.data.arn,
                 "FileKey" : aws_s3_bucket_object.flink_sql_connector_elasticsearch.key
               }
             },
             {
               "ArtifactType" : "DEPENDENCY_JAR",
               "S3ContentLocation" : {
-                "BucketARN" : aws_s3_bucket.s3_bucket_costs.arn,
+                "BucketARN" : aws_s3_bucket.data.arn,
                 "FileKey" : aws_s3_bucket_object.mysql_connector.key
               }
             },
             {
               "ArtifactType" : "DEPENDENCY_JAR",
               "S3ContentLocation" : {
-                "BucketARN" : aws_s3_bucket.s3_bucket_costs.arn,
+                "BucketARN" : aws_s3_bucket.data.arn,
                 "FileKey" : aws_s3_bucket_object.flink_connector_jdbc.key
               }
             },
             {
               "ArtifactType" : "UDF",
               "S3ContentLocation" : {
-                "BucketARN" : aws_s3_bucket.s3_bucket_costs.arn,
+                "BucketARN" : aws_s3_bucket.data.arn,
                 "FileKey" : aws_s3_bucket_object.flink_udf.key
               }
             }
@@ -608,25 +608,25 @@ resource "aws_cloudwatch_log_group" "kinesis_studio" {
 }
 
 resource "aws_s3_bucket_object" "flink_connector_jdbc" {
-  bucket = aws_s3_bucket.s3_bucket_costs.bucket
+  bucket = aws_s3_bucket.data.bucket
   key    = "libs/flink-connector-jdbc_2.11-1.13.5.jar"
   source = "${path.module}/resources/flink/libs/flink-connector-jdbc_2.11-1.13.5.jar"
 }
 
 resource "aws_s3_bucket_object" "mysql_connector" {
-  bucket = aws_s3_bucket.s3_bucket_costs.bucket
+  bucket = aws_s3_bucket.data.bucket
   key    = "libs/mysql-connector-java-8.0.23.jar"
   source = "${path.module}/resources/flink/libs/mysql-connector-java-8.0.23.jar"
 }
 
 resource "aws_s3_bucket_object" "flink_sql_connector_elasticsearch" {
-  bucket = aws_s3_bucket.s3_bucket_costs.bucket
+  bucket = aws_s3_bucket.data.bucket
   key    = "libs/flink-sql-connector-elasticsearch7_2.11-1.13.5.jar"
   source = "${path.module}/resources/flink/libs/flink-sql-connector-elasticsearch7_2.11-1.13.5.jar"
 }
 
 resource "aws_s3_bucket_object" "flink_udf" {
-  bucket = aws_s3_bucket.s3_bucket_costs.bucket
+  bucket = aws_s3_bucket.data.bucket
   key    = "libs/flink-udf-1.0-SNAPSHOT-jar-with-dependencies.jar"
   source = "${path.module}/resources/flink/libs/flink-udf-1.0-SNAPSHOT-jar-with-dependencies.jar"
 }
@@ -737,8 +737,8 @@ data "aws_iam_policy_document" "kinesis_studio" {
       "s3:Put*"
     ]
     resources = [
-      "${aws_s3_bucket.s3_bucket_costs.arn}",
-      "${aws_s3_bucket.s3_bucket_costs.arn}/*"
+      "${aws_s3_bucket.data.arn}",
+      "${aws_s3_bucket.data.arn}/*"
     ]
   }
 

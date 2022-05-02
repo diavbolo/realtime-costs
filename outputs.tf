@@ -44,5 +44,5 @@ output "bucket_airflow_name" {
 }
 
 output "bucket_data_name" {
-  value = "s3://${aws_s3_bucket.s3_bucket_costs.bucket}"
+  value = "s3://${aws_s3_bucket.data.bucket}"
 }
