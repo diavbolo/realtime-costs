@@ -1,9 +1,9 @@
 ﻿{
   "paragraphs": [
     {
-      "text": "%flink.pyflink\n\nimport os\nimport json\nimport boto3\nimport requests\nimport logging\nimport base64\n\nfrom botocore.exceptions import ClientError\n\n# Config variables\nmysql_host = 'mysql.realtime-costs.com'\nmysql_db = 'db'\nmysql_table = 'ec2_costs'\nmysql_port = '3306'\nsecret_name = 'realtime-costs-secrets/mysql'\nregion_name = 'eu-west-1'\ns3_bucket = \"realtime-costs-data\"\ns3_folder = 'ec2_costs'\ns3_file = region_name+'.csv'\ns3_path = 's3://'+s3_bucket+'/'+s3_folder\nsrc_table = 'flink_ec2_costs'\ndst_table = 'flink_ec2_costs_clean'\nurl = 'https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/'\nfilename = 'index.csv'\n\nclass Cost:\n\n    def __init__(self, region, bucket, folder):\n        self.session = boto3.Session()\n        self.client = self.session.client('ec2',region_name=region')\n        self.instance_list = []\n        self.description_list = []\n        self.regions = self.get_regions()\n        self.filename_temp = folder+'/temp.csv'\n        self.filename_temp1 = folder+'/temp1.csv'\n        self.bucket = bucket\n        self.folder = folder\n        self.mkdir_folder(self.folder)\n\n    def get_regions(self):\n        return [region['RegionName'] for region in self.client.describe_regions(AllRegions=True)['Regions']]\n        \n    def mkdir_folder(self, folder):\n        try:\n            if not os.path.exists(folder):\n                os.makedirs(folder)\n\n        except Exception as e:\n            logging.error(e)\n            return False\n        \n    def get_costs_file(self, region):\n        try:\n            response = requests.get(url+region+'/'+filename, stream=True)\n            csv_file = open(self.filename_temp, 'wb')\n            csv_file.write(response.content)\n            csv_file.close()\n\n        except Exception as e:\n            logging.error(e)\n            return False\n\n    def format_costs_file(self, region):\n        try:\n            filename = self.folder+'/'+region+'.csv'\n\n            # Skip first 5 lines\n            with open(self.filename_temp) as f:\n                lines = f.readlines()[5:]\n    \n            # Replace characters and set it to lower case\n            lines[0] = lines[0].replace(\" \", \"_\").replace('_-_','_').replace('/','_').lower()\n    \n            with open(self.filename_temp1, \"w\") as f:\n                f.writelines(lines)\n    \n            os.rename(self.filename_temp1, filename)\n            os.remove(self.filename_temp)\n            \n        except Exception as e:\n            logging.error(e)\n            return False\n\n        return filename\n\n    def upload_file(self, file_name, bucket, object_name=None):\n        \"\"\"Upload a file to an S3 bucket\n\n        :param file_name: File to upload\n        :param bucket: Bucket to upload to\n        :param object_name: S3 object name. If not specified then file_name is used\n        :return: True if file was uploaded, else False\n        \"\"\"\n\n        # If S3 object_name was not specified, use file_name\n        if object_name is None:\n            object_name = os.path.basename(file_name)\n\n        try:\n            s3_client = boto3.client('s3')\n            response = s3_client.upload_file(file_name, bucket, object_name)\n            \n        except ClientError as e:\n            logging.error(e)\n            return False\n            \n        return True\n\n    def process_costs_files(self):\n        for region in self.regions:\n            self.get_costs_file(region)\n            filename = self.format_costs_file(region)\n            self.upload_file(filename, self.bucket, filename)\n\ndef get_secret():\n\n    # Create a Secrets Manager client\n    session = boto3.session.Session()\n    client = session.client(\n        service_name='secretsmanager',\n        region_name=region_name\n    )\n\n    # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.\n    # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html\n    # We rethrow the exception by default.\n\n    try:\n        get_secret_value_response = client.get_secret_value(\n            SecretId=secret_name\n        )\n    except ClientError as e:\n        if e.response['Error']['Code'] == 'DecryptionFailureException':\n            # Secrets Manager can't decrypt the protected secret text using the provided KMS key.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InternalServiceErrorException':\n            # An error occurred on the server side.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InvalidParameterException':\n            # You provided an invalid value for a parameter.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InvalidRequestException':\n            # You provided a parameter value that is not valid for the current state of the resource.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'ResourceNotFoundException':\n            # We can't find the resource that you asked for.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n    else:\n        # Decrypts secret using the associated KMS CMK.\n        # Depending on whether the secret is a string or binary, one of these fields will be populated.\n        if 'SecretString' in get_secret_value_response:\n            secret = get_secret_value_response['SecretString']\n        else:\n            secret = base64.b64decode(get_secret_value_response['SecretBinary'])\n\n    return json.loads(secret)\n\n# Start\ncost = Cost(region_name, s3_bucket, s3_folder)\ncost.process_costs_files()\n    \ncredentials = get_secret()\nmysql_username = credentials['username']\nmysql_password = credentials['password']",
+      "text": "%flink.pyflink\n\nimport os\nimport json\nimport boto3\nimport requests\nimport logging\nimport base64\n\nfrom botocore.exceptions import ClientError\n\n# Config variables\nmysql_host = 'mysql.realtime-costs.com'\nmysql_db = 'db'\nmysql_table = 'ec2_costs'\nmysql_port = '3306'\nsecret_name = 'realtime-costs-secrets/mysql'\nregion_name = 'eu-west-1'\ntemp_folder = '/tmp/ec2_costs'\ns3_bucket = \"realtime-costs-data\"\ns3_folder = temp_folder.replace('/','',1)\ns3_file = region_name+'.csv'\ns3_path = 's3://'+s3_bucket+'/'+s3_folder\nsrc_table = 'flink_ec2_costs'\ndst_table = 'flink_ec2_costs_clean'\nurl = 'https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/'\nfilename = 'index.csv'\n\nclass Cost:\n\n    def __init__(self, region, s3_bucket, s3_folder, temp_folder):\n        self.session = boto3.Session()\n        self.client = self.session.client('ec2',region_name=region)\n        self.instance_list = []\n        self.description_list = []\n        self.regions = self.get_regions()\n        self.temp_folder = temp_folder\n        self.filename_temp = self.temp_folder +'/temp.csv'\n        self.filename_temp1 = self.temp_folder +'/temp1.csv'\n        self.s3_bucket = s3_bucket\n        self.s3_folder = s3_folder\n        self.mkdir_folder(self.temp_folder)\n\n    def get_regions(self):\n        return [region['RegionName'] for region in self.client.describe_regions(AllRegions=True)['Regions']]\n        \n    def mkdir_folder(self, folder):\n        try:\n            if not os.path.exists(folder):\n                os.makedirs(folder)\n\n        except Exception as e:\n            logging.error(e)\n            return False\n        \n    def get_costs_file(self, region):\n        try:\n            response = requests.get(url+region+'/'+filename, stream=True)\n            csv_file = open(self.filename_temp, 'wb')\n            csv_file.write(response.content)\n            csv_file.close()\n\n        except Exception as e:\n            logging.error(e)\n            return False\n\n    def format_costs_file(self, region):\n        try:\n            filename = self.temp_folder+'/'+region+'.csv'\n\n            # Skip first 5 lines\n            with open(self.filename_temp) as f:\n                lines = f.readlines()[5:]\n    \n            # Replace characters and set it to lower case\n            lines[0] = lines[0].replace(\" \", \"_\").replace('_-_','_').replace('/','_').lower()\n    \n            with open(self.filename_temp1, \"w\") as f:\n                f.writelines(lines)\n    \n            os.rename(self.filename_temp1, filename)\n            os.remove(self.filename_temp)\n            \n        except Exception as e:\n            logging.error(e)\n            return False\n\n        return filename\n\n    def upload_file(self, file_name, s3_bucket, object_name=None):\n        \"\"\"Upload a file to an S3 bucket\n\n        :param file_name: File to upload\n        :param bucket: Bucket to upload to\n        :param object_name: S3 object name. If not specified then file_name is used\n        :return: True if file was uploaded, else False\n        \"\"\"\n\n        # If S3 object_name was not specified, use file_name\n        if object_name is None:\n            object_name = os.path.basename(file_name)\n\n        try:\n            s3_client = boto3.client('s3')\n            response = s3_client.upload_file(file_name, s3_bucket, object_name)\n            \n        except ClientError as e:\n            logging.error(e)\n            return False\n            \n        return True\n\n    def process_costs_files(self):\n        for region in self.regions:\n            self.get_costs_file(region)\n            filename = self.format_costs_file(region)\n            self.upload_file(filename, self.s3_bucket, self.s3_folder+'/'+os.path.basename(filename))\n\ndef get_secret():\n\n    # Create a Secrets Manager client\n    session = boto3.session.Session()\n    client = session.client(\n        service_name='secretsmanager',\n        region_name=region_name\n    )\n\n    # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.\n    # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html\n    # We rethrow the exception by default.\n\n    try:\n        get_secret_value_response = client.get_secret_value(\n            SecretId=secret_name\n        )\n    except ClientError as e:\n        if e.response['Error']['Code'] == 'DecryptionFailureException':\n            # Secrets Manager can't decrypt the protected secret text using the provided KMS key.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InternalServiceErrorException':\n            # An error occurred on the server side.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InvalidParameterException':\n            # You provided an invalid value for a parameter.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'InvalidRequestException':\n            # You provided a parameter value that is not valid for the current state of the resource.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n        elif e.response['Error']['Code'] == 'ResourceNotFoundException':\n            # We can't find the resource that you asked for.\n            # Deal with the exception here, and/or rethrow at your discretion.\n            raise e\n    else:\n        # Decrypts secret using the associated KMS CMK.\n        # Depending on whether the secret is a string or binary, one of these fields will be populated.\n        if 'SecretString' in get_secret_value_response:\n            secret = get_secret_value_response['SecretString']\n        else:\n            secret = base64.b64decode(get_secret_value_response['SecretBinary'])\n\n    return json.loads(secret)\n\n# Start\ncost = Cost(region_name, s3_bucket, s3_folder, temp_folder)\ncost.process_costs_files()\n    \ncredentials = get_secret()\nmysql_username = credentials['username']\nmysql_password = credentials['password']",
       "user": "anonymous",
-      "dateUpdated": "2022-01-14T06:43:38+0000",
+      "dateUpdated": "2022-05-02T11:19:33+0000",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -22,26 +22,22 @@
         "params": {},
         "forms": {}
       },
-      "results": {
-        "code": "SUCCESS",
-        "msg": []
-      },
       "apps": [],
       "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
-      "jobName": "paragraph_1641936347246_1591476114",
+      "jobName": "paragraph_1651486466614_650647397",
       "id": "paragraph_1641686677585_828432987",
-      "dateCreated": "2022-01-11T21:25:47+0000",
-      "dateStarted": "2022-01-13T12:40:29+0000",
-      "dateFinished": "2022-01-13T12:41:49+0000",
+      "dateCreated": "2022-05-02T10:14:26+0000",
+      "dateStarted": "2022-05-02T10:45:07+0000",
+      "dateFinished": "2022-05-02T10:46:47+0000",
       "status": "FINISHED",
       "focus": true,
-      "$$hashKey": "object:1546"
+      "$$hashKey": "object:8993"
     },
     {
-      "text": "%flink.pyflink\n\nimport boto3\n\n# The file format might change and therefore we build this dynicamically\ndef get_first_line():\n    s3 = boto3.client('s3')\n    s3.download_file(s3_bucket, s3_folder+\"/\"+s3_file, s3_file)\n    \n    with open(s3_file) as f:\n        lines = f.read()\n        first_line = lines.split('\\n', 1)[0]\n    \n    return first_line.replace('\"', '').replace(',', ' STRING,\\n').replace('group ', '`group` ') + ' STRING'\n\nfirst_line = get_first_line()\n# print(first_line)",
+      "text": "%flink.pyflink\n\nimport boto3\n\n# The file format might change and therefore we build this dynicamically\ndef get_first_line():\n    s3 = boto3.client('s3')\n    s3.download_file(s3_bucket, s3_folder+'/'+s3_file, s3_file)\n    \n    with open(s3_file) as f:\n        lines = f.read()\n        first_line = lines.split('\\n', 1)[0]\n    \n    return first_line.replace('\"', '').replace(',', ' STRING,\\n').replace('group ', '`group` ') + ' STRING'\n\nfirst_line = get_first_line()\n#print(first_line)",
       "user": "anonymous",
-      "dateUpdated": "2022-01-13T12:41:50+0000",
+      "dateUpdated": "2022-05-02T10:50:32+0000",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -60,25 +56,21 @@
         "params": {},
         "forms": {}
       },
-      "results": {
-        "code": "SUCCESS",
-        "msg": []
-      },
       "apps": [],
       "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
-      "jobName": "paragraph_1641986610098_935723719",
+      "jobName": "paragraph_1651486466637_2037707109",
       "id": "paragraph_1641986610098_935723719",
-      "dateCreated": "2022-01-12T11:23:30+0000",
-      "dateStarted": "2022-01-13T12:41:50+0000",
-      "dateFinished": "2022-01-13T12:41:54+0000",
+      "dateCreated": "2022-05-02T10:14:26+0000",
+      "dateStarted": "2022-05-02T10:48:10+0000",
+      "dateFinished": "2022-05-02T10:48:13+0000",
       "status": "FINISHED",
-      "$$hashKey": "object:1547"
+      "$$hashKey": "object:8994"
     },
     {
       "text": "%flink.pyflink\n\nst_env.execute_sql(\"\"\"\nDROP TABLE IF EXISTS {0}\n\"\"\".format(dst_table))\n\nst_env.execute_sql(\"\"\"\nCREATE TABLE {0} (\n    ts TIMESTAMP,\n    region STRING,\n    `type`  STRING,\n    tenancy STRING,\n    os STRING,\n    sqlserver STRING,\n    licensemodel STRING,\n    termtype STRING,\n    capacitystatus STRING,\n    unit STRING,\n    leasecontractlength STRING,\n    purchaseoption STRING,\n    cost double,\n    PRIMARY KEY (region, `type`, tenancy, os, sqlserver) NOT ENFORCED\n)  WITH (\n   'connector' = 'jdbc',\n   'url' = 'jdbc:mysql://{1}:{2}/{3}',\n   'table-name' = '{4}',\n   'username' = '{5}',\n   'password' = '{6}'\n)\n\"\"\".format(dst_table, mysql_host, mysql_port, mysql_db, mysql_table, mysql_username, mysql_password))\n\nst_env.execute_sql(\"\"\"\nDROP TABLE IF EXISTS {0}\n\"\"\".format(src_table))\n\nst_env.execute_sql(\"\"\"\nCREATE TABLE {0} (\n  {1},\n  PRIMARY KEY (region_code, tenancy, instance_type, operating_system, pricedescription) NOT ENFORCED\n) WITH (\n  'connector'='filesystem',\n  'path'='{2}',\n  'format'='csv'\n)\n\"\"\".format(src_table, first_line, s3_path))",
       "user": "anonymous",
-      "dateUpdated": "2022-01-13T12:41:54+0000",
+      "dateUpdated": "2022-05-02T10:48:26+0000",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -96,31 +88,22 @@
       "settings": {
         "params": {},
         "forms": {}
-      },
-      "results": {
-        "code": "SUCCESS",
-        "msg": [
-          {
-            "type": "TEXT",
-            "data": "<pyflink.table.table_result.TableResult at 0x7f8b35a7ef40>"
-          }
-        ]
       },
       "apps": [],
       "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
-      "jobName": "paragraph_1641936347248_585193823",
+      "jobName": "paragraph_1651486466637_1640781556",
       "id": "paragraph_1641686729965_1551174415",
-      "dateCreated": "2022-01-11T21:25:47+0000",
-      "dateStarted": "2022-01-13T12:41:55+0000",
-      "dateFinished": "2022-01-13T12:41:58+0000",
+      "dateCreated": "2022-05-02T10:14:26+0000",
+      "dateStarted": "2022-05-02T10:48:26+0000",
+      "dateFinished": "2022-05-02T10:48:30+0000",
       "status": "FINISHED",
-      "$$hashKey": "object:1548"
+      "$$hashKey": "object:8995"
     },
     {
       "text": "%flink.pyflink\n\nst_env.execute_sql(\"\"\"\nINSERT INTO {0}\nSELECT\n    current_timestamp,\n    region_code,\n    instance_type,\n    tenancy,\n    operating_system,\n    SQLServer,\n    license_model,\n    termtype,\n    capacitystatus,\n    unit,\n    leasecontractlength,\n    purchaseoption,\n    MAX(priceperunit)\nFROM \n(\n    SELECT \n        instance_type,\n        CASE \n            WHEN tenancy = 'Host' THEN 'Shared'\n            ELSE tenancy\n        END AS tenancy,\n        region_code,\n        operating_system, \n        CASE \n            WHEN pricedescription LIKE '%SQL Server Enterprise%' or pricedescription LIKE '%SQL Enterprise%' THEN 'SQL Server Enterprise'\n            WHEN pricedescription LIKE '%SQL Server Standard%' or pricedescription LIKE '%SQL Std%' or pricedescription LIKE '%SQL Standard%' THEN 'SQL Server Standard'\n            WHEN pricedescription LIKE '%SQL Web%' THEN 'SQL Server Web'\n            ELSE ''\n        END AS SQLServer,\n        license_model,\n        CAST(priceperunit AS double) AS priceperunit,\n        unit,\n        termtype,\n        capacitystatus,\n        leasecontractlength,\n        purchaseoption\n    FROM {1}\n    WHERE instance_type<>'Instance_Type'\n) t\nWHERE priceperunit > 0\nAND termtype='OnDemand'\nAND capacitystatus='Used'\nGROUP BY region_code,\n    instance_type,\n    tenancy,\n    operating_system,\n    SQLServer,\n    license_model,\n    termtype,\n    capacitystatus,\n    unit,\n    leasecontractlength,\n    purchaseoption\n\"\"\".format(dst_table, src_table))",
       "user": "anonymous",
-      "dateUpdated": "2022-01-13T12:41:58+0000",
+      "dateUpdated": "2022-05-02T10:48:35+0000",
       "progress": 0,
       "config": {
         "editorSetting": {
@@ -138,15 +121,6 @@
       "settings": {
         "params": {},
         "forms": {}
-      },
-      "results": {
-        "code": "SUCCESS",
-        "msg": [
-          {
-            "type": "TEXT",
-            "data": "<pyflink.table.table_result.TableResult at 0x7f8b3b5bfd60>"
-          }
-        ]
       },
       "apps": [],
       "runtimeInfos": {
@@ -157,26 +131,26 @@
           "group": "flink",
           "values": [
             {
-              "jobUrl": "/flinkdashboard/#/job/3d7cd20f7e25e302e8c0b88948b1a324",
-              "$$hashKey": "object:1841"
+              "jobUrl": "/flinkdashboard/#/job/2bf6f2b33c410e4833aca0c7331a992e",
+              "$$hashKey": "object:9259"
             }
           ],
           "interpreterSettingId": "flink"
         }
       },
       "progressUpdateIntervalMs": 500,
-      "jobName": "paragraph_1641936347250_72867473",
+      "jobName": "paragraph_1651486466638_1888127217",
       "id": "paragraph_1641686757152_385515643",
-      "dateCreated": "2022-01-11T21:25:47+0000",
-      "dateStarted": "2022-01-13T12:41:58+0000",
-      "dateFinished": "2022-01-13T12:42:27+0000",
+      "dateCreated": "2022-05-02T10:14:26+0000",
+      "dateStarted": "2022-05-02T10:48:35+0000",
+      "dateFinished": "2022-05-02T10:49:05+0000",
       "status": "FINISHED",
-      "$$hashKey": "object:1549"
+      "$$hashKey": "object:8996"
     },
     {
-      "text": "%flink.pyflink\n",
+      "text": "%flink.ssql\n",
       "user": "anonymous",
-      "dateUpdated": "2022-01-13T12:42:27+0000",
+      "dateUpdated": "2022-05-02T10:26:34+0000",
       "progress": 0,
       "config": {
         "colWidth": 12,
@@ -184,35 +158,29 @@
         "enabled": true,
         "results": {},
         "editorSetting": {
-          "language": "python",
+          "language": "scala",
           "editOnDblClick": false,
           "completionKey": "TAB",
           "completionSupport": true
         },
-        "editorMode": "ace/mode/python"
+        "editorMode": "ace/mode/scala"
       },
       "settings": {
         "params": {},
         "forms": {}
       },
-      "results": {
-        "code": "SUCCESS",
-        "msg": []
-      },
       "apps": [],
       "runtimeInfos": {},
       "progressUpdateIntervalMs": 500,
-      "jobName": "paragraph_1641936758368_580574657",
-      "id": "paragraph_1641936758368_580574657",
-      "dateCreated": "2022-01-11T21:32:38+0000",
-      "dateStarted": "2022-01-13T12:42:27+0000",
-      "dateFinished": "2022-01-13T12:42:27+0000",
-      "status": "FINISHED",
-      "$$hashKey": "object:1550"
+      "jobName": "paragraph_1651487194464_182677801",
+      "id": "paragraph_1651487194464_182677801",
+      "dateCreated": "2022-05-02T10:26:34+0000",
+      "status": "READY",
+      "$$hashKey": "object:8997"
     }
   ],
   "name": "costs_2_mysql",
-  "id": "2GRNQJG1V",
+  "id": "2H2N2G259",
   "defaultInterpreterGroup": "flink",
   "version": "0.9.0",
   "noteParams": {},

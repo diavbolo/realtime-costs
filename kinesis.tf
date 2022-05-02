@@ -660,6 +660,7 @@ data "aws_iam_policy_document" "kinesis_studio" {
       "kinesis:List*",
       "kinesis:Put*",
       "kinesis:SubscribeToShard",
+      "kinesis:RegisterStreamConsumer"
     ]
     resources = [
       "${aws_kinesis_stream.kinesis.arn}",

@@ -59,3 +59,15 @@ resource "aws_backup_vault_notifications" "backup_events" {
   sns_topic_arn       = aws_sns_topic.sns_alert.arn
   backup_vault_events = ["BACKUP_JOB_FAILED", "RESTORE_JOB_COMPLETED"]
 }
+
+resource "null_resource" "backup_vault_destroy" {
+  triggers = {
+    backup_name = local.backup_name
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "${path.module}/resources/scripts/delete-backups.sh delete ${self.triggers.backup_name}"
+  }
+
+}

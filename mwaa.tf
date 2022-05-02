@@ -110,7 +110,11 @@ module "mwaa" {
             "dynamodb:Scan",
             "dynamodb:PartiQLSelect",
           ],
-          "Resource" : "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/*"
+          "Resource" : [
+            "${aws_dynamodb_table.status.arn}",
+            "${aws_dynamodb_table.config.arn}",
+            "${aws_dynamodb_table.logging.arn}"
+          ]
         },
         {
           "Effect" : "Allow"

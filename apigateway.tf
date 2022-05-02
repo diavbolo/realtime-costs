@@ -9,10 +9,21 @@ resource "aws_iam_role_policy" "readwrite_policy" {
       {
         "Sid" : "",
         "Action" : [
-          "dynamodb:*"
+          "dynamodb:BatchGetItem",
+          "dynamodb:Describe*",
+          "dynamodb:List*",
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:PartiQLSelect",
+          "dynamodb:Put*"
         ],
         "Effect" : "Allow",
-        "Resource" : "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/*"
+        "Resource" : [
+          "${aws_dynamodb_table.status.arn}",
+          "${aws_dynamodb_table.config.arn}",
+          "${aws_dynamodb_table.logging.arn}"
+        ]
       },
       {
         "Sid" : "",
@@ -23,7 +34,15 @@ resource "aws_iam_role_policy" "readwrite_policy" {
           "logs:PutLogEvents"
         ],
         "Effect" : "Allow"
-      }
+      },
+      {
+        "Sid" : "",
+        "Action" : [
+          "lambda:InvokeFunction"
+        ],
+        "Effect" : "Allow",
+        "Resource" : "${aws_lambda_function.readwriteLambda.arn}"
+      },
     ]
   })
 }
@@ -91,14 +110,14 @@ resource "aws_api_gateway_rest_api" "apiLambda" {
 resource "aws_api_gateway_resource" "readwriteResource" {
   rest_api_id = aws_api_gateway_rest_api.apiLambda.id
   parent_id   = aws_api_gateway_rest_api.apiLambda.root_resource_id
-  path_part   = "register"
+  path_part   = var.api_path
 
 }
 
 resource "aws_api_gateway_method" "readwriteMethod" {
   rest_api_id   = aws_api_gateway_rest_api.apiLambda.id
   resource_id   = aws_api_gateway_resource.readwriteResource.id
-  http_method   = "POST"
+  http_method   = var.api_method
   authorization = "NONE"
 }
 
@@ -110,7 +129,7 @@ resource "aws_api_gateway_integration" "readwriteInt" {
   # See https://stackoverflow.com/questions/46767947/aws-api-gateway-error-api-gateway-does-not-have-permission-to-assume-the-provid 
   credentials = aws_iam_role.readwriteRole.arn
 
-  integration_http_method = "POST"
+  integration_http_method = var.api_method
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.readwriteLambda.invoke_arn
 
@@ -121,16 +140,6 @@ resource "aws_api_gateway_deployment" "apideploy" {
 
   rest_api_id = aws_api_gateway_rest_api.apiLambda.id
   stage_name  = var.api_stage
-}
-
-resource "aws_lambda_permission" "readwritePermission" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.readwriteLambda.function_name
-  principal     = "apigateway.amazonaws.com"
-
-  # See https://stackoverflow.com/questions/54835528/aws-api-gateway-and-lambda-function-deployed-through-terraform-execution-fail/54868502#54868502
-  source_arn = "${aws_api_gateway_rest_api.apiLambda.execution_arn}/*/POST/${aws_api_gateway_resource.readwriteResource.path_part}"
 }
 
 resource "aws_api_gateway_base_path_mapping" "api" {

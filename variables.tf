@@ -129,3 +129,11 @@ variable "es_storage" {
 variable "api_stage" {
   default = "prod"
 }
+
+variable "api_method" {
+  default = "POST"
+}
+
+variable "api_path" {
+  default = "register"
+}
