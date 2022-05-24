@@ -1,7 +1,5 @@
 
 resource "aws_db_instance" "mysql" {
-  depends_on = [null_resource.backup_vault_destroy]
-
   identifier               = local.mysql_name
   allocated_storage        = var.mysql_storage
   engine                   = "mysql"
